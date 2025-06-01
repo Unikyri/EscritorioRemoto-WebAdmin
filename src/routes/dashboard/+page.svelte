@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { authStore } from '$lib/stores/auth';
 	import { authService } from '$lib/services/authService';
+	import PCList from '$lib/components/PCList.svelte';
 
 	let backendHealthy = false;
 	let healthCheckTime = '';
@@ -11,6 +12,7 @@
 		sessions: 0,
 		dataTransferred: '0 MB'
 	};
+	let activeTab = 'all';
 
 	onMount(async () => {
 		// Verificar estado del backend
@@ -46,6 +48,10 @@
 			hour: '2-digit',
 			minute: '2-digit'
 		});
+	}
+
+	function switchTab(tab: string) {
+		activeTab = tab;
 	}
 </script>
 
@@ -132,6 +138,42 @@
 					<p class="stat-label">FASE 1 - Autenticación</p>
 				</div>
 			</div>
+		</div>
+	</div>
+
+	<!-- Sección de PCs Cliente -->
+	<div class="pc-section">
+		<div class="section-tabs">
+			<h2 class="section-title">
+				<svg viewBox="0 0 24 24" fill="currentColor" class="section-icon">
+					<path d="M4,6H20V16H4M20,18A2,2 0 0,0 22,16V6C22,4.89 21.1,4 20,4H4C2.89,4 2,4.89 2,6V16A2,2 0 0,0 4,18H0V20H24V18H20Z"/>
+				</svg>
+				Gestión de PCs Cliente
+			</h2>
+			<div class="tabs">
+				<button 
+					class="tab" 
+					class:active={activeTab === 'all'}
+					on:click={() => switchTab('all')}
+				>
+					Todos los PCs
+				</button>
+				<button 
+					class="tab" 
+					class:active={activeTab === 'online'}
+					on:click={() => switchTab('online')}
+				>
+					Solo Online
+				</button>
+			</div>
+		</div>
+		
+		<div class="tab-content">
+			{#if activeTab === 'all'}
+				<PCList showOnlineOnly={false} />
+			{:else if activeTab === 'online'}
+				<PCList showOnlineOnly={true} />
+			{/if}
 		</div>
 	</div>
 
@@ -909,6 +951,92 @@
 		.action-btn {
 			padding: 0.5rem 1rem;
 			font-size: 0.8rem;
+		}
+	}
+
+	/* Estilos para la sección de PCs Cliente */
+	.pc-section {
+		margin-bottom: 2rem;
+	}
+
+	.section-tabs {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1.5rem;
+		padding: 0 0.5rem;
+	}
+
+	.section-title {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin: 0;
+		font-size: 1.5rem;
+		font-weight: 700;
+		color: #1e293b;
+	}
+
+	.section-icon {
+		width: 1.75rem;
+		height: 1.75rem;
+		color: #3b82f6;
+	}
+
+	.tabs {
+		display: flex;
+		gap: 0.5rem;
+		background: #f1f5f9;
+		padding: 0.25rem;
+		border-radius: 0.75rem;
+		border: 1px solid #e2e8f0;
+	}
+
+	.tab {
+		padding: 0.75rem 1.5rem;
+		background: transparent;
+		border: none;
+		border-radius: 0.5rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: #64748b;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		position: relative;
+	}
+
+	.tab:hover {
+		color: #3b82f6;
+		background: rgba(59, 130, 246, 0.1);
+	}
+
+	.tab.active {
+		background: white;
+		color: #3b82f6;
+		font-weight: 600;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	}
+
+	.tab-content {
+		margin-top: 1rem;
+	}
+
+	/* Responsive para la sección de PCs */
+	@media (max-width: 768px) {
+		.section-tabs {
+			flex-direction: column;
+			gap: 1rem;
+			align-items: flex-start;
+		}
+
+		.tabs {
+			width: 100%;
+			justify-content: center;
+		}
+
+		.tab {
+			flex: 1;
+			text-align: center;
 		}
 	}
 </style> 
