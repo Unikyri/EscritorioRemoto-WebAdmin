@@ -7,11 +7,16 @@ export interface WebSocketEvent {
 }
 
 export interface PCConnectionEvent {
-	type: 'PC_CONNECTED' | 'PC_DISCONNECTED' | 'PC_STATUS_CHANGED';
+	type: 'pc_connected' | 'pc_disconnected' | 'pc_status_changed' | 'pc_registered' | 'pc_list_update';
 	pcId: string;
-	newStatus?: 'ONLINE' | 'OFFLINE' | 'CONNECTING';
-	username?: string;
+	identifier?: string;
+	ownerUserId?: string;
 	ip?: string;
+	status?: 'ONLINE' | 'OFFLINE' | 'CONNECTING';
+	oldStatus?: string;
+	newStatus?: string;
+	timestamp?: number;
+	event?: string;
 }
 
 class WebSocketService {
@@ -34,20 +39,18 @@ class WebSocketService {
 				return;
 			}
 
+			// Extraer token de Bearer
+			const token = (authHeaders as { Authorization: string }).Authorization.replace('Bearer ', '');
+			
+			// Crear URL con token como query parameter
+			const wsUrlWithToken = `${this.wsUrl}?token=${encodeURIComponent(token)}`;
+
 			// Crear conexión WebSocket
-			this.ws = new WebSocket(this.wsUrl);
+			this.ws = new WebSocket(wsUrlWithToken);
 
 			this.ws.onopen = () => {
 				console.log('WebSocket conectado');
 				this.reconnectAttempts = 0;
-				
-				// Enviar token de autenticación
-				this.send({
-					type: 'AUTH',
-					data: {
-						token: (authHeaders as { Authorization: string }).Authorization.replace('Bearer ', '')
-					}
-				});
 			};
 
 			this.ws.onmessage = (event) => {
