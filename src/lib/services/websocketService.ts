@@ -1,23 +1,16 @@
 import { authService } from './authService';
+import type {
+	WebSocketEvent,
+	PCConnectionEvent,
+	PCConnectionEventData,
+	ScreenFrame,
+	InputCommand,
+	MouseEventPayload,
+	KeyboardEventPayload
+} from '$lib/types/websocket.types';
 
-export interface WebSocketEvent {
-	type: string;
-	timestamp: string;
-	data: any;
-}
-
-export interface PCConnectionEvent {
-	type: 'pc_connected' | 'pc_disconnected' | 'pc_status_changed' | 'pc_registered' | 'pc_list_update';
-	pcId: string;
-	identifier?: string;
-	ownerUserId?: string;
-	ip?: string;
-	status?: 'ONLINE' | 'OFFLINE' | 'CONNECTING';
-	oldStatus?: string;
-	newStatus?: string;
-	timestamp?: number;
-	event?: string;
-}
+// Exportar el tipo WebSocketEvent para que otros módulos puedan usarlo
+export type { WebSocketEvent } from '$lib/types/websocket.types';
 
 class WebSocketService {
 	private ws: WebSocket | null = null;
@@ -93,14 +86,37 @@ class WebSocketService {
 	private send(message: any): void {
 		if (this.ws && this.ws.readyState === WebSocket.OPEN) {
 			this.ws.send(JSON.stringify(message));
+		} else {
+			console.warn('WebSocket no está conectado, no se puede enviar mensaje:', message);
 		}
+	}
+
+	/**
+	 * Enviar comando de input al servidor
+	 */
+	sendInputCommand(inputCommand: InputCommand): void {
+		this.send({
+			type: 'input_command',
+			data: inputCommand
+		});
 	}
 
 	/**
 	 * Manejar mensajes recibidos
 	 */
 	private handleMessage(message: WebSocketEvent): void {
-		console.log('WebSocket message received:', message);
+		console.log('WebSocket message received:', message.type);
+		
+		// Log específico para screen frames (sin datos binarios)
+		if (message.type === 'screen_frame') {
+			const frameData = message.data as ScreenFrame;
+			console.log(`📹 SCREEN FRAME: Received frame ${frameData.sequence_num} (${frameData.width}x${frameData.height})`);
+		}
+
+		// Log específico para session_accepted
+		if (message.type === 'session_accepted') {
+			console.log('✅ SESSION ACCEPTED: Client accepted remote control session', message.data);
+		}
 		
 		const handlers = this.eventHandlers.get(message.type) || [];
 		handlers.forEach(handler => {

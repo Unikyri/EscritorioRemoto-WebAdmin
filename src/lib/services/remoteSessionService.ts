@@ -1,93 +1,112 @@
 import { authService } from './authService';
+import { websocketService, type WebSocketEvent } from './websocketService';
+import type {
+	InitiateSessionRequest,
+	InitiateSessionResponse,
+	SessionStatusResponse,
+	SessionSummary,
+	ActiveSessionsResponse,
+	UserSessionsResponse,
+	RemoteSessionError,
+	SessionWebSocketEvent
+} from '$lib/types/session.types';
 
 // Tipos para sesiones remotas
-export interface InitiateSessionRequest {
-	client_pc_id: string;
-}
-
-export interface InitiateSessionResponse {
-	success: boolean;
-	session_id: string;
-	status: string;
-	message: string;
-}
-
-export interface SessionStatusResponse {
-	session_id: string;
-	admin_user_id: string;
-	client_pc_id: string;
-	status: string;
-	start_time?: string | null;
-	end_time?: string | null;
-	duration?: number | null;
-	created_at: string;
-	updated_at: string;
-}
-
-export interface SessionSummary {
-	session_id: string;
-	admin_user_id: string;
-	client_pc_id: string;
-	status: string;
-	start_time?: string | null;
-	end_time?: string | null;
-	created_at: string;
-}
-
-export interface ActiveSessionsResponse {
-	sessions: SessionSummary[];
-	count: number;
-}
-
-export interface UserSessionsResponse {
-	sessions: SessionSummary[];
-	count: number;
-}
-
-export interface RemoteSessionError {
-	error: string;
-	message: string;
-	details?: string;
-}
 
 // Eventos WebSocket para sesiones
-export interface SessionWebSocketEvent {
-	type: 'session_started' | 'session_rejected' | 'session_ended' | 'session_failed';
-	session_id: string;
-	admin_user_id: string;
-	client_pc_id: string;
-	start_time?: string;
-	end_time?: string;
-	end_reason?: string;
-	duration?: string;
-	error?: string;
-	reason?: string;
-}
 
 class RemoteSessionService {
+	private apiUrl = 'http://localhost:8080/api/admin/sessions';
+
 	/**
 	 * Iniciar una nueva sesión de control remoto
 	 */
-	async initiateSession(clientPCID: string): Promise<InitiateSessionResponse> {
+	async initiateSession(clientPcId: string): Promise<InitiateSessionResponse> {
 		try {
-			const response = await authService.authenticatedFetch('/admin/sessions/initiate', {
+			const authHeaders = authService.getAuthHeader();
+			
+			const response = await fetch(`${this.apiUrl}/initiate`, {
 				method: 'POST',
-				body: JSON.stringify({ 
-					client_pc_id: clientPCID 
-				} as InitiateSessionRequest),
+				headers: {
+					'Content-Type': 'application/json',
+					...authHeaders
+				},
+				body: JSON.stringify({
+					client_pc_id: clientPcId
+				})
 			});
 
 			if (!response.ok) {
-				const error = await response.json() as RemoteSessionError;
-				throw new Error(error.message || 'Error al iniciar sesión remota');
+				const error = await response.json();
+				throw new Error(error.message || 'Error al iniciar sesión');
 			}
 
-			const data = await response.json() as InitiateSessionResponse;
-			return data;
+			const result = await response.json();
+			
+			// Configurar listener para session_accepted si la sesión se inició correctamente
+			if (result.success && result.session_id) {
+				this.setupSessionAcceptedListener(result.session_id);
+			}
+			
+			return result;
 		} catch (error) {
-			console.error('Error initiating remote session:', error);
+			console.error('Error initiating session:', error);
 			throw error;
 		}
+	}
+
+	/**
+	 * Configurar listener para cuando el cliente acepta la sesión
+	 */
+	private setupSessionAcceptedListener(sessionId: string): void {
+		const handleSessionAccepted = (event: WebSocketEvent) => {
+			const sessionData = event.data;
+			
+			// Verificar que es la sesión correcta
+			if (sessionData.session_id === sessionId) {
+				console.log('🎉 Session accepted, starting remote control in dashboard...');
+				
+				// Limpiar listener
+				websocketService.unsubscribe('session_accepted', handleSessionAccepted);
+				
+				// Emitir evento personalizado para que el dashboard lo capture
+				const customEvent = new CustomEvent('session-accepted', {
+					detail: {
+						sessionId: sessionId,
+						clientPcId: sessionData.client_pc_id,
+						status: sessionData.status,
+						startTime: sessionData.start_time
+					}
+				});
+				window.dispatchEvent(customEvent);
+			}
+		};
+
+		// Suscribirse al evento
+		websocketService.subscribe('session_accepted', handleSessionAccepted);
+		
+		// Auto-cleanup después de 5 minutos si no se acepta
+		setTimeout(() => {
+			websocketService.unsubscribe('session_accepted', handleSessionAccepted);
+		}, 5 * 60 * 1000);
+	}
+
+	/**
+	 * Configurar listener para screen frames (para usar en el dashboard)
+	 */
+	setupScreenFrameListener(callback: (frame: any) => void): () => void {
+		const handleScreenFrame = (event: WebSocketEvent) => {
+			if (event.type === 'screen_frame') {
+				callback(event.data);
+			}
+		};
+
+		websocketService.subscribe('screen_frame', handleScreenFrame);
+
+		// Retornar función para limpiar el listener
+		return () => {
+			websocketService.unsubscribe('screen_frame', handleScreenFrame);
+		};
 	}
 
 	/**
@@ -123,7 +142,8 @@ class RemoteSessionService {
 			}
 
 			const data = await response.json() as ActiveSessionsResponse;
-			return data.sessions;
+			// Asegurar que siempre retornemos un array, incluso si el backend retorna null
+			return Array.isArray(data.sessions) ? data.sessions : [];
 		} catch (error) {
 			console.error('Error fetching active sessions:', error);
 			throw error;
@@ -143,7 +163,8 @@ class RemoteSessionService {
 			}
 
 			const data = await response.json() as UserSessionsResponse;
-			return data.sessions;
+			// Asegurar que siempre retornemos un array, incluso si el backend retorna null
+			return Array.isArray(data.sessions) ? data.sessions : [];
 		} catch (error) {
 			console.error('Error fetching user sessions:', error);
 			throw error;
@@ -207,6 +228,27 @@ class RemoteSessionService {
 	 */
 	isSessionActive(status: string): boolean {
 		return status === 'ACTIVE';
+	}
+
+	/**
+	 * Finalizar una sesión por parte del administrador
+	 */
+	async endSession(sessionId: string): Promise<void> {
+		try {
+			const response = await authService.authenticatedFetch(`/admin/sessions/${sessionId}/end`, {
+				method: 'POST'
+			});
+
+			if (!response.ok) {
+				const error = await response.json() as RemoteSessionError;
+				throw new Error(error.message || 'Error al finalizar sesión');
+			}
+
+			console.log('✅ Session ended successfully:', sessionId);
+		} catch (error) {
+			console.error('Error ending session:', error);
+			throw error;
+		}
 	}
 }
 

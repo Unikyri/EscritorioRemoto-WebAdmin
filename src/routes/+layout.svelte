@@ -108,18 +108,17 @@
 					</svg>
 					<span>Dashboard</span>
 				</a>
+				<a href="/sessions" class="nav-item" aria-label="Gestión de Sesiones Remotas">
+					<svg viewBox="0 0 24 24" fill="currentColor">
+						<path d="M12 2A10 10 0 0 0 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2m0 2a8 8 0 0 1 8 8a8 8 0 0 1-8 8a8 8 0 0 1-8-8a8 8 0 0 1 8-8m1 3h-2v6l5.25 3.15l.75-1.23L13 11V7Z"/>
+					</svg>
+					<span>Sesiones Remotas</span>
+				</a>
 				<span class="nav-item disabled" aria-label="PCs Conectados - Disponible en próxima fase">
 					<svg viewBox="0 0 24 24" fill="currentColor">
 						<path d="M4 2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2m0 2v16h16V4H4m2 2h12v2H6V6m0 4h8v2H6v-2m0 4h10v2H6v-2Z"/>
 					</svg>
 					<span>PCs Conectados</span>
-					<span class="badge">Próximo</span>
-				</span>
-				<span class="nav-item disabled" aria-label="Sesiones Remotas - Disponible en próxima fase">
-					<svg viewBox="0 0 24 24" fill="currentColor">
-						<path d="M12 2A10 10 0 0 0 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2m0 2a8 8 0 0 1 8 8a8 8 0 0 1-8 8a8 8 0 0 1-8-8a8 8 0 0 1 8-8m1 3h-2v6l5.25 3.15l.75-1.23L13 11V7Z"/>
-					</svg>
-					<span>Sesiones Remotas</span>
 					<span class="badge">Próximo</span>
 				</span>
 				<span class="nav-item disabled" aria-label="Transferencias - Disponible en próxima fase">
