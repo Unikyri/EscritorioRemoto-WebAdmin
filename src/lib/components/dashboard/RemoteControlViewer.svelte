@@ -3,6 +3,7 @@
 	import { remoteSessionService } from '$lib/services/remoteSessionService'; // Mantener si los tipos se mueven después
 	import { websocketService } from '$lib/services/websocketService'; // Mantener si los tipos se mueven después
 	import { authService } from '$lib/services/authService'; // Agregar importación
+	import FileTransferModal from './FileTransferModal.svelte';
 
 	export let sessionId: string = '';
 	export let clientPcId: string = '';
@@ -15,6 +16,8 @@
 	let frameCount = 0;
 	let fps = 0;
 	let isReceivingFrames = false;
+	let showFileTransferModal = false;
+	let recentTransfers: Array<{transferId: string, fileName: string, status: string}> = [];
 
 	$: if (canvas && !ctx) {
 		ctx = canvas.getContext('2d');
@@ -113,6 +116,25 @@
 		isExpanded = !isExpanded;
 	}
 
+	function openFileTransferModal() {
+		showFileTransferModal = true;
+	}
+
+	function handleTransferCompleted(event: CustomEvent) {
+		const { transferId, fileName, status } = event.detail;
+		
+		// Agregar a transferencias recientes
+		recentTransfers = [
+			{ transferId, fileName, status },
+			...recentTransfers.slice(0, 4) // Mantener máximo 5 transferencias
+		];
+
+		console.log('✅ File transfer completed:', { transferId, fileName, status });
+		
+		// Opcional: Mostrar notificación toast
+		// TODO: Implementar sistema de notificaciones
+	}
+
 	async function endSession() {
 		if (!sessionId) {
 			console.error('No session ID to end');
@@ -166,6 +188,19 @@
 		</div>
 		
 		<div class="viewer-controls">
+			<!-- Botón de Transferencia de Archivos -->
+			<button 
+				class="control-btn" 
+				on:click={openFileTransferModal} 
+				title="Transferir Archivo"
+				aria-label="Transferir Archivo"
+				disabled={!sessionId || !clientPcId}
+			>
+				<svg viewBox="0 0 24 24" fill="currentColor">
+					<path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z M15,13V17H13V13H10.5L14,9.5L17.5,13H15Z"/>
+				</svg>
+			</button>
+
 			<button class="control-btn" on:click={toggleExpanded} title={isExpanded ? 'Contraer' : 'Expandir'}>
 				<svg viewBox="0 0 24 24" fill="currentColor">
 					{#if isExpanded}
@@ -199,6 +234,20 @@
 						<p>Esperando transmisión del cliente...</p>
 					</div>
 				{/if}
+
+				<!-- Indicador de transferencias recientes -->
+				{#if recentTransfers.length > 0}
+					<div class="transfers-indicator">
+						<h4>Transferencias recientes:</h4>
+						{#each recentTransfers as transfer}
+							<div class="transfer-item" class:completed={transfer.status === 'COMPLETED'} 
+								 class:failed={transfer.status === 'FAILED'} class:pending={transfer.status === 'PENDING'}>
+								<span class="transfer-name">{transfer.fileName}</span>
+								<span class="transfer-status">{transfer.status}</span>
+							</div>
+						{/each}
+					</div>
+				{/if}
 			</div>
 		{:else}
 			<div class="no-session">
@@ -211,6 +260,15 @@
 		{/if}
 	</div>
 </div>
+
+<!-- Modal de Transferencia de Archivos -->
+<FileTransferModal 
+	bind:isOpen={showFileTransferModal}
+	{sessionId}
+	{clientPcId}
+	on:transfer-completed={handleTransferCompleted}
+	on:close={() => showFileTransferModal = false}
+/>
 
 <style>
 	.remote-control-viewer {
@@ -310,12 +368,18 @@
 		transition: all 0.2s ease;
 	}
 
-	.control-btn:hover {
+	.control-btn:hover:not(:disabled) {
 		background: rgba(255, 255, 255, 0.25);
 		transform: scale(1.05);
 	}
 
-	.control-btn.danger:hover {
+	.control-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+		transform: none;
+	}
+
+	.control-btn.danger:hover:not(:disabled) {
 		background: #ef4444;
 	}
 
@@ -383,6 +447,67 @@
 		margin: 0;
 		font-size: 0.9rem;
 		opacity: 0.8;
+	}
+
+	.transfers-indicator {
+		position: absolute;
+		top: 1rem;
+		right: 1rem;
+		background: rgba(0, 0, 0, 0.8);
+		color: white;
+		padding: 0.75rem;
+		border-radius: 6px;
+		font-size: 0.8rem;
+		max-width: 250px;
+		backdrop-filter: blur(4px);
+	}
+
+	.transfers-indicator h4 {
+		margin: 0 0 0.5rem;
+		font-size: 0.85rem;
+		font-weight: 600;
+	}
+
+	.transfer-item {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0.25rem 0;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	}
+
+	.transfer-item:last-child {
+		border-bottom: none;
+	}
+
+	.transfer-name {
+		flex: 1;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		margin-right: 0.5rem;
+	}
+
+	.transfer-status {
+		font-size: 0.7rem;
+		padding: 0.125rem 0.375rem;
+		border-radius: 3px;
+		font-weight: 500;
+	}
+
+	.transfer-item.completed .transfer-status {
+		background: #10b981;
+		color: white;
+	}
+
+	.transfer-item.failed .transfer-status {
+		background: #ef4444;
+		color: white;
+	}
+
+	.transfer-item.pending .transfer-status {
+		background: #f59e0b;
+		color: white;
 	}
 
 	.no-session {

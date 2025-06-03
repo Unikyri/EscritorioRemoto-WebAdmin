@@ -1,8 +1,16 @@
 # EscritorioRemoto-WebAdmin
 
-Panel de administración web para el sistema de Escritorio Remoto - **FASE 1 COMPLETADA** ✅
+Panel de administración web para el sistema de Escritorio Remoto - **FASE 8 - PASO 1 COMPLETADA** ✅
 
 ## 🎯 Estado del Proyecto
+
+### FASE 8 - PASO 1: Transferencia de Archivos - ✅ COMPLETADA
+- ✅ **FileTransferService**: Servicio para comunicación con API backend
+- ✅ **FileTransferModal**: Modal intuitivo para subir archivos
+- ✅ **RemoteControlViewer**: Integración del botón de transferencia
+- ✅ **Drag & Drop**: Soporte para arrastrar archivos
+- ✅ **Estados visuales**: Indicaciones de progreso y resultado
+- ✅ **Transferencias recientes**: Overlay con últimas transferencias
 
 ### FASE 1: Autenticación del Administrador - ✅ COMPLETADA
 - ✅ **Store de Autenticación**: Manejo global del estado con Svelte stores
@@ -27,8 +35,12 @@ src/
 ├── lib/
 │   ├── stores/
 │   │   └── auth.ts              # Store global de autenticación
-│   └── services/
-│       └── authService.ts       # Servicio para comunicación con API
+│   ├── services/
+│   │   ├── authService.ts       # Servicio para comunicación con API
+│   │   └── fileTransferService.ts # Servicio para transferencia de archivos
+│   └── components/dashboard/
+│       ├── FileTransferModal.svelte # Modal para transferir archivos
+│       └── RemoteControlViewer.svelte # Visor de control remoto (actualizado)
 ├── routes/
 │   ├── +layout.svelte          # Layout principal con protección de rutas
 │   ├── +page.svelte            # Página principal (redirección)
@@ -82,6 +94,17 @@ Contraseña: password
 
 ### 3. Funcionalidades Disponibles
 
+#### Transferencia de Archivos (NUEVO) 📁
+- **Botón de transferencia**: Icono en la barra de controles durante sesión activa
+- **Modal intuitivo**: Interfaz drag & drop para subir archivos
+- **Nombre personalizable**: Especificar nombre del archivo en el cliente
+- **Estados visuales**: 
+  - 🔄 "Subiendo archivo al servidor..."
+  - ✅ "Transferencia iniciada exitosamente"
+  - ❌ "Error al transferir archivo"
+- **Indicador de transferencias**: Overlay con últimas 5 transferencias
+- **Estados de transferencia**: PENDING, IN_PROGRESS, COMPLETED, FAILED
+
 #### Página de Login
 - Formulario con validación en tiempo real
 - Mostrar/ocultar contraseña
@@ -101,6 +124,41 @@ Contraseña: password
 - Redirección a `/dashboard` si ya autenticado
 - Persistencia de sesión en localStorage
 - Logout automático en caso de token expirado
+
+## 📁 Transferencia de Archivos
+
+### FileTransferService
+```typescript
+interface FileTransferResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    transfer_id: string;
+    file_name: string;
+    target_pc_id: string;
+    session_id: string;
+    status: string;
+    file_size_mb: number;
+    destination_path: string;
+  };
+  error?: string;
+}
+```
+
+### Métodos Disponibles
+- `sendFileToClient()`: Subir archivo desde PC admin
+- `sendServerFileToClient()`: Enviar archivo existente en servidor
+- `getSessionTransfers()`: Obtener transferencias de una sesión
+- `getTransferStatus()`: Estado de transferencia específica
+- `getPendingTransfers()`: Transferencias pendientes
+
+### Estados de Transferencia
+| Estado | Descripción | Color UI |
+|--------|-------------|----------|
+| `PENDING` | Transferencia creada, esperando procesamiento | 🟡 Amarillo |
+| `IN_PROGRESS` | Enviando chunks al cliente | 🔵 Azul |
+| `COMPLETED` | Transferencia exitosa | 🟢 Verde |
+| `FAILED` | Error en transferencia | 🔴 Rojo |
 
 ## 🔐 Autenticación
 
@@ -140,6 +198,7 @@ interface AuthState {
 - **Iconos emoji**: Interfaz amigable y moderna
 - **Loading states**: Feedback visual durante operaciones
 - **Error handling**: Alertas claras y descriptivas
+- **Drag & Drop**: Área de carga intuitiva para archivos
 
 ### Paleta de Colores
 - Primario: `#667eea` → `#764ba2`
@@ -154,6 +213,10 @@ interface AuthState {
 - `GET /health`: Verificación de estado
 - `POST /api/auth/login`: Autenticación
 - `GET /api/auth/verify`: Verificación de token (futuro)
+- **`POST /api/admin/sessions/{sessionID}/files/send`**: Transferir archivo a cliente
+- **`GET /api/admin/sessions/{sessionID}/files`**: Obtener transferencias de sesión
+- **`GET /api/admin/transfers/{transferID}/status`**: Estado de transferencia específica
+- **`GET /api/admin/transfers/pending`**: Transferencias pendientes
 
 ### Configuración de API
 ```typescript
@@ -164,6 +227,14 @@ const API_BASE_URL = 'http://localhost:8080/api';
 El backend está configurado para permitir peticiones desde el frontend con headers apropiados.
 
 ## 🧪 Pruebas
+
+### Pruebas de Transferencia de Archivos ✅
+1. **Subir archivo mediante drag & drop**: Arrastra archivo al modal
+2. **Subir archivo mediante click**: Selecciona archivo con explorador
+3. **Especificar nombre personalizado**: Cambia nombre para el cliente
+4. **Estados visuales**: Observa progreso de transferencia
+5. **Transferencias recientes**: Ve historial en overlay
+6. **Validaciones**: Archivo requerido, nombre requerido
 
 ### Pruebas Manuales Realizadas ✅
 1. **Acceso sin autenticación**: Redirección a login
@@ -183,9 +254,16 @@ El backend está configurado para permitir peticiones desde el frontend con head
 # 5. Logout manual
 # 6. Token expirado
 # 7. Recarga de página
+# 8. Transferencia de archivos (NUEVO)
+# 9. Estados de transferencia (NUEVO)
 ```
 
 ## 📋 Próximas Fases
+
+### FASE 8 - PASO 2: Cliente Wails
+- Recepción de chunks de archivos
+- Procesamiento y guardado en cliente
+- Notificaciones de progreso
 
 ### FASE 2: Cliente y Registro de PC
 - Gestión de usuarios cliente
@@ -198,9 +276,6 @@ El backend está configurado para permitir peticiones desde el frontend con head
 - Filtros y búsqueda
 
 ### FASE 4+: Control Remoto
-- Inicio de sesiones remotas
-- Streaming de pantalla
-- Control de mouse/teclado
 
 ## 🐛 Problemas Conocidos
 
