@@ -114,6 +114,13 @@
 					</svg>
 					<span>Sesiones Remotas</span>
 				</a>
+				<a href="/recordings" class="nav-item" aria-label="Visualizar Grabaciones de Sesiones">
+					<svg viewBox="0 0 24 24" fill="currentColor">
+						<path d="M8 5v14l11-7z"/>
+						<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1"/>
+					</svg>
+					<span>Grabaciones</span>
+				</a>
 				<span class="nav-item disabled" aria-label="PCs Conectados - Disponible en próxima fase">
 					<svg viewBox="0 0 24 24" fill="currentColor">
 						<path d="M4 2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2m0 2v16h16V4H4m2 2h12v2H6V6m0 4h8v2H6v-2m0 4h10v2H6v-2Z"/>
